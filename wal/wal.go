@@ -799,24 +799,53 @@ func (w *WAL) sync() error {
 		return nil
 	}
 
-	start := time.Now()
-	err := fileutil.Fdatasync(w.tail().File)
+	// -----------------------------
 
-	took := time.Since(start)
-	if took > warnSyncDuration {
-		if w.lg != nil {
-			w.lg.Warn(
-				"slow fdatasync",
-				zap.Duration("took", took),
-				zap.Duration("expected-duration", warnSyncDuration),
-			)
-		} else {
-			plog.Warningf("sync duration of %v, expected less than %v", took, warnSyncDuration)
+	// return nil
+
+	// -----------------------------
+
+	// start := time.Now()
+	// err := fileutil.Fdatasync(w.tail().File)
+
+	// took := time.Since(start)
+	// if took > warnSyncDuration {
+	// 	if w.lg != nil {
+	// 		w.lg.Warn(
+	// 			"slow fdatasync",
+	// 			zap.Duration("took", took),
+	// 			zap.Duration("expected-duration", warnSyncDuration),
+	// 		)
+	// 	} else {
+	// 		plog.Warningf("sync duration of %v, expected less than %v", took, warnSyncDuration)
+	// 	}
+	// }
+	// walFsyncSec.Observe(took.Seconds())
+
+	// return err
+
+	// -----------------------------
+
+	go func(w *WAL) {
+		start := time.Now()
+		_ = fileutil.Fdatasync(w.tail().File)
+
+		took := time.Since(start)
+		if took > warnSyncDuration {
+			if w.lg != nil {
+				w.lg.Warn(
+					"slow fdatasync",
+					zap.Duration("took", took),
+					zap.Duration("expected-duration", warnSyncDuration),
+				)
+			} else {
+				plog.Warningf("sync duration of %v, expected less than %v", took, warnSyncDuration)
+			}
 		}
-	}
-	walFsyncSec.Observe(took.Seconds())
+		walFsyncSec.Observe(took.Seconds())
 
-	return err
+	}(w)
+	return nil
 }
 
 func (w *WAL) Sync() error {
